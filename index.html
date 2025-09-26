@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>寻宝大冒险 - 流畅动画版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f1b3a, #2a3f5f);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            margin-top: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+            background: linear-gradient(to right, #ffd700, #ffed4e, #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: titleGlow 3s infinite alternate;
+        }
+        
+        @keyframes titleGlow {
+            0% { text-shadow: 0 0 5px rgba(255, 215, 0, 0.5); }
+            100% { text-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 30px rgba(255, 215, 0, 0.6); }
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px 0;
+        }
+        
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 3px solid #5d4a30;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            background: #1a1a2e;
+        }
+        
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .scene-label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .progress-container {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, #4CAF50, #8BC34A, #CDDC39);
+            border-radius: 10px;
+            transition: width 0.8s cubic-bezier(0.22, 0.61, 0.36, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 30px;
+            background: linear-gradient(to right, #FF8C00, #FFA500);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(255, 165, 0, 0.4);
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        button::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: rgba(255, 255, 255, 0.1);
+            transform: rotate(45deg);
+            transition: all 0.5s ease;
+            opacity: 0;
+        }
+        
+        button:hover::after {
+            opacity: 1;
+            transform: rotate(45deg) translate(10px, 10px);
+        }
+        
+        .log-container {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            padding: 15px;
+            height: 150px;
+            overflow-y: auto;
+            margin-top: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.9rem;
+        }
+        
+        .log-entry {
+            padding: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            animation: fadeInUp 0.5s ease;
+        }
+        
+        .log-entry.success {
+            color: #90EE90;
+        }
+        
+        .log-entry.error {
+            color: #FF6B6B;
+        }
+        
+        .log-entry.highlight {
+            color: #FFD700;
+            font-weight: bold;
+        }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .treasure-reveal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1s ease;
+        }
+        
+        .treasure-reveal.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .treasure-content {
+            text-align: center;
+            animation: treasurePulse 2s infinite alternate;
+        }
+        
+        .treasure-icon {
+            font-size: 8rem;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 0 20px gold);
+        }
+        
+        .treasure-message {
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            background: linear-gradient(to right, #FFD700, #FFA500, #FFD700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        @keyframes treasurePulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.05); }
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin: 15px 0;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #FFD700;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .canvas-container {
+                height: 300px;
+            }
+            
+            .treasure-message {
+                font-size: 1.8rem;
+            }
+            
+            .treasure-icon {
+                font-size: 5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>寻宝大冒险</h1>
+        <p class="subtitle">跟随线索，寻找失落的宝藏！</p>
+    </header>
+    
+    <div class="container">
+        <div class="game-container">
+            <div class="canvas-container">
+                <canvas id="gameCanvas"></canvas>
+                <div class="scene-label" id="sceneLabel">场景: 图书馆</div>
+            </div>
+            
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar">0%</div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="stepCount">0</div>
+                    <div class="stat-label">已完成步骤</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="timeSpent">0s</div>
+                    <div class="stat-label">用时</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="treasureValue">0</div>
+                    <div class="stat-label">宝藏价值</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn">开始寻宝</button>
+            <button id="pauseBtn" disabled>暂停</button>
+            <button id="resetBtn" disabled>重新开始</button>
+        </div>
+        
+        <div class="log-container" id="logContainer">
+            <div class="log-entry">寻宝日志开始...点击"开始寻宝"按钮启动冒险！</div>
+        </div>
+    </div>
+    
+    <div class="treasure-reveal" id="treasureReveal">
+        <div class="treasure-content">
+            <div class="treasure-icon">💎</div>
+            <div class="treasure-message">恭喜！你找到了传说中的宝藏！</div>
+            <button id="closeTreasureBtn">继续冒险</button>
+        </div>
+    </div>
+
+    <script>
+        // 扩展的宝藏地图API
+        class TreasureMap {
+            static async getInitialClue() {
+                await delay(1000);
+                return "在古老的图书馆里找到了第一个线索：一张泛黄的地图，上面标记着神秘的符号...";
+            }
+            
+            static async decodeAncientScript(clue) {
+                if (!clue) {
+                    throw new Error("没有线索可以解码!");
+                }
+                
+                await delay(1500);
+                return "解码成功!地图指向一座隐藏在丛林深处的古老神庙...";
+            }
+            
+            static async navigateToTemple(location) {
+                if (!location) {
+                    throw new Error("没有位置信息!");
+                }
+                
+                await delay(1000);
+                const random = Math.random();
+                if (random < 0.2) {
+                    throw new Error("糟糕!在丛林中迷路了，需要重新确定方向!");
+                }
+                
+                return "成功穿越丛林，找到了神庙的入口!";
+            }
+            
+            static async searchTemple(location) {
+                if (!location) {
+                    throw new Error("没有位置信息!");
+                }
+                
+                await delay(2000);
+                const random = Math.random();
+                if (random < 0.3) {
+                    throw new Error("糟糕!遇到了神庙守卫，需要想办法绕过去!");
+                }
+                
+                return "在神庙深处找到了一个神秘的箱子，上面有复杂的锁...";
+            }
+            
+            static async solvePuzzle() {
+                await delay(1500);
+                const random = Math.random();
+                if (random < 0.2) {
+                    throw new Error("宝箱的谜题太难了!需要更多时间思考...");
+                }
+                
+                return "成功解开谜题!宝箱的锁打开了...";
+            }
+            
+            static async openTreasureBox() {
+                await delay(1000);
+                return "恭喜!你找到了传说中的宝藏——一颗闪耀的钻石和无数金币!";
+            }
+        }
+        
+        // 工具函数
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        // 游戏状态
+        const gameState = {
+            currentStep: 0,
+            totalSteps: 6,
+            isSearching: false,
+            isPaused: false,
+            startTime: null,
+            treasureValue: 0
+        };
+        
+        // DOM元素
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const closeTreasureBtn = document.getElementById('closeTreasureBtn');
+        const logContainer = document.getElementById('logContainer');
+        const progressBar = document.getElementById('progressBar');
+        const sceneLabel = document.getElementById('sceneLabel');
+        const treasureReveal = document.getElementById('treasureReveal');
+        const stepCount = document.getElementById('stepCount');
+        const timeSpent = document.getElementById('timeSpent');
+        const treasureValue = document.getElementById('treasureValue');
+        
+        // Canvas设置
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 设置Canvas尺寸
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        
+        // 游戏角色和场景
+        const adventurer = {
+            x: 50,
+            y: canvas.height / 2,
+            width: 40,
+            height: 60,
+            color: '#3498db',
+            targetX: 50,
+            targetY: canvas.height / 2,
+            speed: 2,
+            moving: false
+        };
+        
+        const scenes = [
+            { name: "图书馆", color: "#8B4513", elements: [] },
+            { name: "解码室", color: "#2C3E50", elements: [] },
+            { name: "丛林", color: "#27AE60", elements: [] },
+            { name: "神庙入口", color: "#E67E22", elements: [] },
+            { name: "神庙内部", color: "#7D3C98", elements: [] },
+            { name: "宝藏室", color: "#F1C40F", elements: [] }
+        ];
+        
+        let currentScene = 0;
+        
+        // 初始化场景元素
+        function initSceneElements() {
+            // 图书馆场景
+            scenes[0].elements = [
+                { type: "bookshelf", x: canvas.width - 100, y: 100, width: 80, height: 200, color: "#8B4513" },
+                { type: "table", x: canvas.width / 2 - 60, y: canvas.height - 150, width: 120, height: 20, color: "#A0522D" },
+                { type: "lamp", x: 100, y: 80, width: 10, height: 80, color: "#D4AC0D" }
+            ];
+            
+            // 解码室场景
+            scenes[1].elements = [
+                { type: "scroll", x: canvas.width / 2 - 40, y: canvas.height / 2 - 60, width: 80, height: 120, color: "#F7DC6F" },
+                { type: "desk", x: canvas.width - 150, y: canvas.height - 100, width: 120, height: 20, color: "#A0522D" },
+                { type: "symbols", x: 100, y: 100, width: 120, height: 120, color: "#1B4F72" }
+            ];
+            
+            // 丛林场景
+            scenes[2].elements = [
+                { type: "tree", x: canvas.width - 150, y: 100, width: 60, height: 200, color: "#27AE60" },
+                { type: "tree", x: 200, y: 150, width: 50, height: 180, color: "#229954" },
+                { type: "bush", x: canvas.width / 2, y: canvas.height - 100, width: 120, height: 60, color: "#145A32" }
+            ];
+            
+            // 神庙入口场景
+            scenes[3].elements = [
+                { type: "pillar", x: 100, y: 50, width: 30, height: 200, color: "#BA4A00" },
+                { type: "pillar", x: canvas.width - 130, y: 50, width: 30, height: 200, color: "#BA4A00" },
+                { type: "arch", x: canvas.width / 2 - 100, y: 80, width: 200, height: 80, color: "#A04000" }
+            ];
+            
+            // 神庙内部场景
+            scenes[4].elements = [
+                { type: "altar", x: canvas.width / 2 - 80, y: canvas.height / 2 - 40, width: 160, height: 80, color: "#7D3C98" },
+                { type: "torch", x: 80, y: 100, width: 10, height: 60, color: "#F39C12" },
+                { type: "torch", x: canvas.width - 90, y: 100, width: 10, height: 60, color: "#F39C12" }
+            ];
+            
+            // 宝藏室场景
+            scenes[5].elements = [
+                { type: "chest", x: canvas.width / 2 - 60, y: canvas.height / 2 - 40, width: 120, height: 80, color: "#D4AC0D" },
+                { type: "coins", x: canvas.width / 2 - 100, y: canvas.height / 2 + 60, width: 200, height: 40, color: "#F1C40F" },
+                { type: "gem", x: canvas.width / 2 - 20, y: canvas.height / 2 - 100, width: 40, height: 40, color: "#9B59B6" }
+            ];
+        }
+        
+        // 绘制场景
+        function drawScene() {
+            const scene = scenes[currentScene];
+            
+            // 绘制背景
+            ctx.fillStyle = scene.color;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制场景元素
+            scene.elements.forEach(element => {
+                ctx.fillStyle = element.color;
+                
+                if (element.type === "bookshelf") {
+                    // 绘制书架
+                    ctx.fillRect(element.x, element.y, element.width, element.height);
+                    
+                    // 书架上的书
+                    ctx.fillStyle = "#8B0000";
+                    for (let i = 0; i < 5; i++) {
+                        ctx.fillRect(element.x + 5, element.y + 10 + i * 35, element.width - 10, 25);
+                    }
+                } else if (element.type === "table") {
+                    // 绘制桌子
+                    ctx.fillRect(element.x, element.y, element.width, element.height);
+                    
+                    // 桌子腿
+                    ctx.fillRect(element.x + 10, element.y + element.height, 10, 40);
+                    ctx.fillRect(element.x + element.width - 20, element.y + element.height, 10, 40);
+                } else if (element.type === "lamp") {
+                    // 绘制灯
+                    ctx.fillRect(element.x, element.y, element.width, element.height);
+                    ctx.beginPath();
+                    ctx.arc(element.x + element.width/2, element.y - 10, 20, 0, Math.PI * 2);
+                    ctx.fillStyle = "#F7DC6F";
+                    ctx.fill();
+                } else if (element.type === "scroll") {
+                    // 绘制卷轴
+                    ctx.fillRect(element.x, element.y, element.width, element.height);
+                    
+                    // 卷轴细节
+                    ctx.fillStyle = "#F9E79F";
+                    ctx.fillRect(element.x + 10, element.y + 10, element.width - 20, element.height - 20);
+                } else if (element.type === "tree") {
+                    // 绘制树
+                    ctx.fillRect(element.x, element.y, element.width, element.height);
+                    
+                    // 树冠
+                    ctx.beginPath();
+                    ctx.arc(element.x + element.width/2, element.y - 30, 50, 0, Math.PI * 2);
+                    ctx.fillStyle = "#145A32";
+                    ctx.fill();
+                } else if (element.type === "chest") {
+                    // 绘制宝箱
+                    ctx.fillRect(element.x, element.y, element.width, element.height);
+                    
+                    // 宝箱细节
+                    ctx.fillStyle = "#B7950B";
+                    ctx.fillRect(element.x + 10, element.y + 10, element.width - 20, 10);
+                    ctx.fillRect(element.x + 10, element.y + element.height - 20, element.width - 20, 10);
+                    
+                    // 宝箱锁
+                    ctx.beginPath();
+                    ctx.arc(element.x + element.width/2, element.y + element.height/2, 10, 0, Math.PI * 2);
+                    ctx.fillStyle = "#7D6608";
+                    ctx.fill();
+                } else {
+                    // 默认绘制矩形
+                    ctx.fillRect(element.x, element.y, element.width, element.height);
+                }
+            });
+            
+            // 绘制冒险者
+            ctx.fillStyle = adventurer.color;
+            ctx.fillRect(adventurer.x, adventurer.y, adventurer.width, adventurer.height);
+            
+            // 绘制冒险者头部
+            ctx.beginPath();
+            ctx.arc(adventurer.x + adventurer.width/2, adventurer.y - 10, 15, 0, Math.PI * 2);
+            ctx.fillStyle = "#FFEAA7";
+            ctx.fill();
+            
+            // 绘制移动目标点（调试用）
+            if (adventurer.moving) {
+                ctx.beginPath();
+                ctx.arc(adventurer.targetX, adventurer.targetY, 5, 0, Math.PI * 2);
+                ctx.fillStyle = "red";
+                ctx.fill();
+            }
+        }
+        
+        // 更新冒险者位置
+        function updateAdventurer() {
+            if (!adventurer.moving) return;
+            
+            const dx = adventurer.targetX - adventurer.x;
+            const dy = adventurer.targetY - adventurer.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < adventurer.speed) {
+                adventurer.x = adventurer.targetX;
+                adventurer.y = adventurer.targetY;
+                adventurer.moving = false;
+            } else {
+                adventurer.x += (dx / distance) * adventurer.speed;
+                adventurer.y += (dy / distance) * adventurer.speed;
+            }
+        }
+        
+        // 移动冒险者到指定位置
+        function moveAdventurerTo(x, y) {
+            adventurer.targetX = x;
+            adventurer.targetY = y;
+            adventurer.moving = true;
+        }
+        
+        // 切换场景
+        function changeScene(sceneIndex) {
+            currentScene = sceneIndex;
+            sceneLabel.textContent = `场景: ${scenes[sceneIndex].name}`;
+            
+            // 根据场景设置冒险者初始位置
+            switch(sceneIndex) {
+                case 0: // 图书馆
+                    adventurer.x = 50;
+                    adventurer.y = canvas.height / 2;
+                    break;
+                case 1: // 解码室
+                    adventurer.x = 50;
+                    adventurer.y = canvas.height / 2;
+                    break;
+                case 2: // 丛林
+                    adventurer.x = 50;
+                    adventurer.y = canvas.height / 2;
+                    break;
+                case 3: // 神庙入口
+                    adventurer.x = 50;
+                    adventurer.y = canvas.height / 2;
+                    break;
+                case 4: // 神庙内部
+                    adventurer.x = 50;
+                    adventurer.y = canvas.height / 2;
+                    break;
+                case 5: // 宝藏室
+                    adventurer.x = 50;
+                    adventurer.y = canvas.height / 2;
+                    break;
+            }
+            
+            adventurer.moving = false;
+        }
+        
+        // 游戏循环
+        function gameLoop() {
+            if (gameState.isPaused) return;
+            
+            updateAdventurer();
+            drawScene();
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // 添加日志条目
+        function addLogEntry(message, type = '') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        // 更新进度条
+        function updateProgress(percentage) {
+            progressBar.style.width = `${percentage}%`;
+            progressBar.textContent = `${percentage}%`;
+        }
+        
+        // 更新统计信息
+        function updateStats() {
+            stepCount.textContent = gameState.currentStep;
+            
+            if (gameState.startTime) {
+                const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
+                timeSpent.textContent = `${elapsed}s`;
+            }
+            
+            treasureValue.textContent = gameState.treasureValue;
+        }
+        
+        // 显示宝藏
+        function showTreasure() {
+            treasureReveal.classList.add('active');
+            gameState.treasureValue = 10000;
+            updateStats();
+        }
+        
+        // 隐藏宝藏
+        function hideTreasure() {
+            treasureReveal.classList.remove('active');
+        }
+        
+        // 重置游戏
+        function resetGame() {
+            gameState.currentStep = 0;
+            gameState.isSearching = false;
+            gameState.isPaused = false;
+            gameState.startTime = null;
+            gameState.treasureValue = 0;
+            
+            updateProgress(0);
+            changeScene(0);
+            logContainer.innerHTML = '<div class="log-entry">寻宝日志开始...点击"开始寻宝"按钮启动冒险！</div>';
+            
+            startBtn.disabled = false;
+            pauseBtn.disabled = true;
+            resetBtn.disabled = true;
+            
+            updateStats();
+            hideTreasure();
+        }
+        
+        // 寻宝流程
+        async function findTreasure() {
+            if (gameState.isSearching) return;
+            
+            gameState.isSearching = true;
+            gameState.startTime = Date.now();
+            startBtn.disabled = true;
+            pauseBtn.disabled = false;
+            resetBtn.disabled = false;
+            
+            try {
+                // 步骤1: 获取初始线索
+                addLogEntry('前往图书馆寻找线索...');
+                changeScene(0);
+                moveAdventurerTo(canvas.width - 150, canvas.height / 2);
+                
+                await delay(2000);
+                const clue = await TreasureMap.getInitialClue();
+                addLogEntry(clue, 'success');
+                gameState.currentStep = 1;
+                updateProgress(17);
+                updateStats();
+                
+                // 步骤2: 解码古文字
+                addLogEntry('前往解码室分析线索...', 'highlight');
+                changeScene(1);
+                moveAdventurerTo(canvas.width / 2 - 40, canvas.height / 2 - 60);
+                
+                await delay(2000);
+                const location = await TreasureMap.decodeAncientScript(clue);
+                addLogEntry(location, 'success');
+                gameState.currentStep = 2;
+                updateProgress(33);
+                updateStats();
+                
+                // 步骤3: 穿越丛林
+                addLogEntry('穿越丛林，寻找神庙...', 'highlight');
+                changeScene(2);
+                moveAdventurerTo(canvas.width - 100, canvas.height / 2);
+                
+                await delay(2000);
+                const navigationResult = await TreasureMap.navigateToTemple(location);
+                addLogEntry(navigationResult, 'success');
+                gameState.currentStep = 3;
+                updateProgress(50);
+                updateStats();
+                
+                // 步骤4: 进入神庙
+                addLogEntry('进入神庙，探索内部...', 'highlight');
+                changeScene(3);
+                moveAdventurerTo(canvas.width / 2, canvas.height / 2);
+                
+                await delay(1500);
+                changeScene(4);
+                moveAdventurerTo(canvas.width / 2 - 80, canvas.height / 2 - 40);
+                
+                await delay(2000);
+                const box = await TreasureMap.searchTemple(location);
+                addLogEntry(box, 'success');
+                gameState.currentStep = 4;
+                updateProgress(67);
+                updateStats();
+                
+                // 步骤5: 解谜
+                addLogEntry('尝试解开宝箱的谜题...', 'highlight');
+                await delay(2000);
+                const puzzleResult = await TreasureMap.solvePuzzle();
+                addLogEntry(puzzleResult, 'success');
+                gameState.currentStep = 5;
+                updateProgress(83);
+                updateStats();
+                
+                // 步骤6: 打开宝箱
+                addLogEntry('打开宝箱...', 'highlight');
+                changeScene(5);
+                moveAdventurerTo(canvas.width / 2 - 60, canvas.height / 2 - 40);
+                
+                await delay(2000);
+                const treasure = await TreasureMap.openTreasureBox();
+                addLogEntry(treasure, 'success');
+                gameState.currentStep = 6;
+                updateProgress(100);
+                updateStats();
+                
+                // 显示宝藏
+                showTreasure();
+                addLogEntry('寻宝任务完成!', 'highlight');
+                
+            } catch (error) {
+                addLogEntry(`任务失败: ${error}`, 'error');
+                addLogEntry('尝试重新开始寻宝...');
+            } finally {
+                gameState.isSearching = false;
+                startBtn.disabled = false;
+                pauseBtn.disabled = true;
+            }
+        }
+        
+        // 暂停/继续游戏
+        function togglePause() {
+            gameState.isPaused = !gameState.isPaused;
+            pauseBtn.textContent = gameState.isPaused ? '继续' : '暂停';
+            
+            if (!gameState.isPaused) {
+                gameLoop();
+            }
+        }
+        
+        // 事件监听
+        startBtn.addEventListener('click', findTreasure);
+        pauseBtn.addEventListener('click', togglePause);
+        resetBtn.addEventListener('click', resetGame);
+        closeTreasureBtn.addEventListener('click', hideTreasure);
+        
+        // 初始化游戏
+        initSceneElements();
+        changeScene(0);
+        gameLoop();
+        resetGame();
+    </script>
+</body>
+</html>
